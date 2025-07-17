@@ -29,6 +29,7 @@ export default function Dashboard() {
       }
     });
   };
+
   if (!localStorage.getItem("token")) {
     window.location.href = "/login";
   }
@@ -44,6 +45,30 @@ export default function Dashboard() {
       default:
         return "text-gray-600 bg-gray-50 border-gray-200";
     }
+  };
+
+  // Check if all subtopics in a topic are completed
+  const isTopicCompleted = (topic) => {
+    if (!topic.subtopics || topic.subtopics.length === 0) return false;
+
+    return topic.subtopics.every((subtopic) => {
+      const itemId = `${topic.topicId}_${subtopic.problemId}`;
+      return completedItems.includes(itemId);
+    });
+  };
+
+  // Get completion stats for a topic
+  const getTopicStats = (topic) => {
+    if (!topic.subtopics || topic.subtopics.length === 0) {
+      return { completed: 0, total: 0 };
+    }
+
+    const completed = topic.subtopics.filter((subtopic) => {
+      const itemId = `${topic.topicId}_${subtopic.problemId}`;
+      return completedItems.includes(itemId);
+    }).length;
+
+    return { completed, total: topic.subtopics.length };
   };
 
   return (
@@ -76,132 +101,167 @@ export default function Dashboard() {
         <div className="space-y-4">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">DSA Topics</h2>
 
-          {topics.map((topic) => (
-            <div
-              key={topic._id}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
-            >
-              <div
-                className="p-4 bg-gradient-to-r from-gray-50 to-gray-100 cursor-pointer hover:from-gray-100 hover:to-gray-200 transition-all duration-200 flex justify-between items-center"
-                onClick={() => toggleTopic(topic.topicId)}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span className="font-semibold text-gray-800 text-lg">
-                    {topic.title}
-                  </span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(
-                      topic.level
-                    )}`}
-                  >
-                    {topic.level}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">
-                    {topic.subtopics?.length || 0} problems
-                  </span>
-                  <span
-                    className="transform transition-transform duration-200 text-gray-400"
-                    style={{
-                      transform:
-                        openTopic === topic.topicId
-                          ? "rotate(180deg)"
-                          : "rotate(0deg)",
-                    }}
-                  >
-                    ▼
-                  </span>
-                </div>
-              </div>
+          {topics.map((topic) => {
+            const topicCompleted = isTopicCompleted(topic);
+            const topicStats = getTopicStats(topic);
 
-              {openTopic === topic.topicId && (
-                <div className="p-6 bg-white border-t border-gray-100">
-                  <div className="space-y-4">
-                    {topic.subtopics.map((sub) => {
-                      const itemId = `${topic.topicId}_${sub.problemId}`;
-                      const isChecked = completedItems.includes(itemId);
-                      return (
-                        <div
-                          key={sub.problemId}
-                          className={`p-4 rounded-lg border-2 transition-all duration-200 ${
-                            isChecked
-                              ? "bg-green-50 border-green-200"
-                              : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={(e) =>
-                                handleCheckbox(
-                                  topic.topicId,
-                                  sub.problemId,
-                                  e.target.checked
-                                )
-                              }
-                              className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <span
-                                  className={`font-medium ${
-                                    isChecked
-                                      ? "text-green-800"
-                                      : "text-gray-800"
-                                  }`}
-                                >
-                                  {sub.title}
-                                </span>
-                                <span
-                                  className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(
-                                    sub.level
-                                  )}`}
-                                >
-                                  {sub.level}
-                                </span>
-                              </div>
-                              <div className="flex items-center space-x-4">
-                                <a
-                                  href={sub.youtubeLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center space-x-1 text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
-                                >
-                                  <span>📺</span>
-                                  <span>YouTube</span>
-                                </a>
-                                <a
-                                  href={sub.leetcodeLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center space-x-1 text-orange-600 hover:text-orange-700 text-sm font-medium transition-colors"
-                                >
-                                  <span>💻</span>
-                                  <span>LeetCode</span>
-                                </a>
-                                <a
-                                  href={sub.articleLink}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
-                                >
-                                  <span>📚</span>
-                                  <span>Article</span>
-                                </a>
+            return (
+              <div
+                key={topic._id}
+                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all duration-200 ${
+                  topicCompleted
+                    ? "border-green-300 bg-green-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div
+                  className={`p-4 cursor-pointer transition-all duration-200 flex justify-between items-center ${
+                    topicCompleted
+                      ? "bg-gradient-to-r from-green-50 to-green-100 hover:from-green-100 hover:to-green-200"
+                      : "bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200"
+                  }`}
+                  onClick={() => toggleTopic(topic.topicId)}
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${
+                          topicCompleted ? "bg-green-500" : "bg-blue-500"
+                        }`}
+                      ></div>
+                      {topicCompleted && (
+                        <span className="text-green-600 text-lg">✓</span>
+                      )}
+                    </div>
+                    <span
+                      className={`font-semibold text-lg ${
+                        topicCompleted ? "text-green-800" : "text-gray-800"
+                      }`}
+                    >
+                      {topic.title}
+                    </span>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(
+                        topic.level
+                      )}`}
+                    >
+                      {topic.level}
+                    </span>
+                    {topicCompleted && (
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium border border-green-200">
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span
+                      className={`text-sm ${
+                        topicCompleted ? "text-green-600" : "text-gray-500"
+                      }`}
+                    >
+                      {topicStats.completed}/{topicStats.total} problems
+                    </span>
+                    <span
+                      className="transform transition-transform duration-200 text-gray-400"
+                      style={{
+                        transform:
+                          openTopic === topic.topicId
+                            ? "rotate(180deg)"
+                            : "rotate(0deg)",
+                      }}
+                    >
+                      ▼
+                    </span>
+                  </div>
+                </div>
+
+                {openTopic === topic.topicId && (
+                  <div className="p-6 bg-white border-t border-gray-100">
+                    <div className="space-y-4">
+                      {topic.subtopics.map((sub) => {
+                        const itemId = `${topic.topicId}_${sub.problemId}`;
+                        const isChecked = completedItems.includes(itemId);
+                        return (
+                          <div
+                            key={sub.problemId}
+                            className={`p-4 rounded-lg border-2 transition-all duration-200 ${
+                              isChecked
+                                ? "bg-green-50 border-green-200"
+                                : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                            }`}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) =>
+                                  handleCheckbox(
+                                    topic.topicId,
+                                    sub.problemId,
+                                    e.target.checked
+                                  )
+                                }
+                                className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3 mb-2">
+                                  <span
+                                    className={`font-medium ${
+                                      isChecked
+                                        ? "text-green-800"
+                                        : "text-gray-800"
+                                    }`}
+                                  >
+                                    {sub.title}
+                                  </span>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs font-medium border ${getLevelColor(
+                                      sub.level
+                                    )}`}
+                                  >
+                                    {sub.level}
+                                  </span>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                  <a
+                                    href={sub.youtubeLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-1 text-red-600 hover:text-red-700 text-sm font-medium transition-colors"
+                                  >
+                                    <span>📺</span>
+                                    <span>YouTube</span>
+                                  </a>
+                                  <a
+                                    href={sub.leetcodeLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-1 text-orange-600 hover:text-orange-700 text-sm font-medium transition-colors"
+                                  >
+                                    <span>💻</span>
+                                    <span>LeetCode</span>
+                                  </a>
+                                  <a
+                                    href={sub.articleLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center space-x-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+                                  >
+                                    <span>📚</span>
+                                    <span>Article</span>
+                                  </a>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
